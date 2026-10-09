@@ -37,6 +37,14 @@
     margin: 0 0 4px 0;
   }
 
+  /* === CANVAS GLOBAL FIX === */
+  canvas {
+    display: block;
+    width: 100%;
+    height: auto;
+    max-width: 100%;
+  }
+
   /* === SCENE === */
   .scene-wrap {
     background: #0f0f1e;
@@ -46,7 +54,7 @@
     position: relative;
   }
 
-  #scene { width: 100%; height: auto; display: block; border-radius: 8px; }
+  #scene { aspect-ratio: 800 / 320; border-radius: 8px; }
 
   .winner-badge {
     position: absolute;
@@ -66,7 +74,6 @@
     z-index: 10;
     white-space: nowrap;
   }
-
   .winner-badge.show { transform: translate(-50%, -50%) scale(1); }
   .winner-badge small { display: block; font-size: 0.7em; font-weight: normal; opacity: 0.8; margin-top: 4px; }
 
@@ -81,7 +88,6 @@
     font-size: clamp(10px, 2.6vw, 12px);
     text-align: center;
   }
-
   .info-item .label { color: #888; margin-bottom: 2px; }
   .info-item .val {
     font-weight: bold;
@@ -95,7 +101,6 @@
     border-radius: 10px;
     padding: 10px 12px;
   }
-
   .scrub-header {
     display: flex;
     justify-content: space-between;
@@ -103,7 +108,6 @@
     color: #aaa;
     margin-bottom: 8px;
   }
-
   .scrub-header .t-val {
     color: #ffd700;
     font-weight: bold;
@@ -112,13 +116,13 @@
 
   input[type="range"] {
     -webkit-appearance: none;
+    appearance: none;
     width: 100%;
     height: 6px;
     border-radius: 3px;
     background: #2a2a3e;
     outline: none;
   }
-
   input[type="range"]::-webkit-slider-thumb {
     -webkit-appearance: none;
     width: 22px;
@@ -127,6 +131,14 @@
     background: #ffd700;
     cursor: pointer;
     box-shadow: 0 0 10px #ffd70080;
+  }
+  input[type="range"]::-moz-range-thumb {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: #ffd700;
+    cursor: pointer;
+    border: none;
   }
 
   /* === CONTROLS === */
@@ -154,7 +166,6 @@
     font-size: clamp(13px, 3.2vw, 15px);
     margin-bottom: 10px;
   }
-
   .dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
   .dot.glb { background: #4a9eff; box-shadow: 0 0 10px #4a9eff; }
   .dot.glbb { background: #ff6b6b; box-shadow: 0 0 10px #ff6b6b; }
@@ -178,10 +189,14 @@
   .value.glb { color: #4a9eff; }
   .value.glbb { color: #ff6b6b; }
 
-  .card.glbb input[type="range"]::-webkit-slider-thumb {
-    background: #ff6b6b;
-    box-shadow: 0 0 8px #ff6b6b80;
+  .card.glb input[type="range"]::-webkit-slider-thumb {
+    background: #4a9eff; box-shadow: 0 0 8px #4a9eff80;
   }
+  .card.glb input[type="range"]::-moz-range-thumb { background: #4a9eff; }
+  .card.glbb input[type="range"]::-webkit-slider-thumb {
+    background: #ff6b6b; box-shadow: 0 0 8px #ff6b6b80;
+  }
+  .card.glbb input[type="range"]::-moz-range-thumb { background: #ff6b6b; }
 
   /* === BUTTONS === */
   .buttons-row { display: flex; gap: 8px; }
@@ -242,7 +257,7 @@
     margin-bottom: 6px;
     font-weight: bold;
   }
-  .graph-card canvas { width: 100%; height: auto; display: block; }
+  #graphV, #graphS { aspect-ratio: 400 / 220; }
 
   .legend {
     display: flex; gap: 12px; justify-content: center;
@@ -273,8 +288,6 @@
     padding: 8px 6px;
     text-align: center;
     font-weight: bold;
-    position: sticky;
-    top: 0;
     font-size: clamp(9px, 2.4vw, 11px);
   }
   td {
@@ -299,7 +312,6 @@
     font-size: 12px;
   }
 
-  /* === HIDDEN SECTIONS === */
   .section { display: none; }
   .section.active { display: block; }
 </style>
@@ -311,10 +323,13 @@
     <p class="subtitle">Perbandingan Gerak Lurus Beraturan vs Berubah Beraturan</p>
   </div>
 
-  <!-- SCENE -->
+  <!-- SCENE: fixed resolution 800x320 -->
   <div class="scene-wrap">
-    <canvas id="scene" width="800" height="260"></canvas>
-    <div class="winner-badge" id="winnerBadge">🏆 <span id="winnerText">GLB Menang!</span><small id="winnerTime">pada t = 0 s</small></div>
+    <canvas id="scene" width="800" height="320"></canvas>
+    <div class="winner-badge" id="winnerBadge">
+      🏆 <span id="winnerText">GLB Menang!</span>
+      <small id="winnerTime">pada t = 0 s</small>
+    </div>
   </div>
 
   <!-- INFO -->
@@ -385,7 +400,7 @@
     <div class="tab" data-tab="table">📊 Tabel Data</div>
   </div>
 
-  <!-- GRAPHS SECTION -->
+  <!-- GRAPHS -->
   <div class="section active" id="section-graphs">
     <div class="graphs">
       <div class="graph-card">
@@ -407,7 +422,7 @@
     </div>
   </div>
 
-  <!-- TABLE SECTION -->
+  <!-- TABLE -->
   <div class="section" id="section-table">
     <div class="table-wrap">
       <div style="display:flex; gap:8px; margin-bottom:10px;">
@@ -432,10 +447,16 @@
   </div>
 
 <script>
-// ============ SETUP ============
-const scene = document.getElementById('scene').getContext('2d');
-const gV = document.getElementById('graphV').getContext('2d');
-const gS = document.getElementById('graphS').getContext('2d');
+// ================================================================
+// SETUP
+// ================================================================
+const sceneCanvas = document.getElementById('scene');
+const graphVCanvas = document.getElementById('graphV');
+const graphSCanvas = document.getElementById('graphS');
+
+const scene = sceneCanvas.getContext('2d');
+const gV = graphVCanvas.getContext('2d');
+const gS = graphSCanvas.getContext('2d');
 
 const el = {
   v0GLB: document.getElementById('v0GLB'),
@@ -458,16 +479,18 @@ const el = {
 let params = { v0GLB: 5, v0GLBB: 5, aGLBB: 2 };
 let t = 0;
 let running = false;
-let winner = null; // 'glb' | 'glbb' | 'tie' | null
+let winner = null;
 const MAX_T = 10;
 const DT = 0.05;
-const FINISH_DISTANCE = 75; // meter
+const FINISH_DISTANCE = 75;
 
 let dataV = { glb: [], glbb: [] };
 let dataS = { glb: [], glbb: [] };
-let tableData = []; // { t, sGLB, vGLB, sGLBB, vGLBB }
+let tableData = [];
 
-// ============ INPUT HANDLERS ============
+// ================================================================
+// INPUT HANDLERS
+// ================================================================
 function bindSlider(input, valEl, key, decimals = 1) {
   input.addEventListener('input', () => {
     const v = parseFloat(input.value);
@@ -480,14 +503,18 @@ bindSlider(el.v0GLB, el.v0GLBVal, 'v0GLB');
 bindSlider(el.v0GLBB, el.v0GLBBVal, 'v0GLBB');
 bindSlider(el.aGLBB, el.aGLBBVal, 'aGLBB');
 
-// Scrub handler
 el.scrub.addEventListener('input', () => {
-  if (running) { running = false; document.getElementById('btnStart').textContent = '▶ Lanjut'; }
+  if (running) {
+    running = false;
+    document.getElementById('btnStart').textContent = '▶ Lanjut';
+  }
   t = parseFloat(el.scrub.value);
   draw();
 });
 
-// ============ PHYSICS ============
+// ================================================================
+// PHYSICS
+// ================================================================
 function stateGLB(time) {
   return { s: params.v0GLB * time, v: params.v0GLB, a: 0 };
 }
@@ -499,10 +526,13 @@ function stateGLBB(time) {
   };
 }
 
-// ============ DRAW SCENE ============
+// ================================================================
+// DRAW SCENE — pakai resolusi INTERNAL canvas (800x320)
+// ================================================================
 function drawScene(t, sGLB, sGLBB, vGLB, vGLBB) {
-  const W = scene.canvas.width;
-  const H = scene.canvas.height;
+  const W = 800;   // ⚠️ fixed, BUKAN getBoundingClientRect
+  const H = 320;   // ⚠️ fixed
+
   scene.clearRect(0, 0, W, H);
 
   // grid
@@ -515,23 +545,20 @@ function drawScene(t, sGLB, sGLBB, vGLB, vGLBB) {
     scene.beginPath(); scene.moveTo(0, y); scene.lineTo(W, y); scene.stroke();
   }
 
-  // skala: 75m -> lebar layar - margin
-  const MARGIN_START = 40;
-  const MARGIN_END = 60;
+  const MARGIN_START = 50;
+  const MARGIN_END = 70;
   const trackW = W - MARGIN_START - MARGIN_END;
   const SCALE = trackW / FINISH_DISTANCE;
-
   const finishX = MARGIN_START + FINISH_DISTANCE * SCALE;
 
-  // === Lintasan GLB ===
-  const y1 = 80;
-  drawLane(scene, y1, W, MARGIN_START, finishX);
+  // posisi lintasan — GLB atas, GLBB bawah
+  const y1 = 100;
+  const y2 = 240;
 
-  // === Lintasan GLBB ===
-  const y2 = 190;
+  drawLane(scene, y1, W, MARGIN_START, finishX);
   drawLane(scene, y2, W, MARGIN_START, finishX);
 
-  // === Mobil ===
+  // mobil
   const xGLB = MARGIN_START + Math.min(sGLB, FINISH_DISTANCE) * SCALE;
   drawCar(scene, Math.min(xGLB, finishX - 25), y1, '#4a9eff', 'GLB');
 
@@ -540,18 +567,18 @@ function drawScene(t, sGLB, sGLBB, vGLB, vGLBB) {
 
   // label kecepatan
   scene.fillStyle = '#888';
-  scene.font = 'bold 11px sans-serif';
+  scene.font = 'bold 12px sans-serif';
   scene.textAlign = 'left';
-  scene.fillText(`${vGLB.toFixed(1)} m/s`, 5, y1 - 32);
-  scene.fillText(`${vGLBB.toFixed(1)} m/s`, 5, y2 - 32);
+  scene.fillText(`${vGLB.toFixed(1)} m/s`, 8, y1 - 38);
+  scene.fillText(`${vGLBB.toFixed(1)} m/s`, 8, y2 - 38);
 
   // label jarak
-  scene.fillStyle = '#4a9eff';
   scene.textAlign = 'center';
-  scene.font = 'bold 10px sans-serif';
-  scene.fillText(`${Math.min(sGLB, FINISH_DISTANCE).toFixed(1)} m`, xGLB, y1 + 42);
+  scene.font = 'bold 11px sans-serif';
+  scene.fillStyle = '#4a9eff';
+  scene.fillText(`${Math.min(sGLB, FINISH_DISTANCE).toFixed(1)} m`, xGLB, y1 + 48);
   scene.fillStyle = '#ff6b6b';
-  scene.fillText(`${Math.min(sGLBB, FINISH_DISTANCE).toFixed(1)} m`, xGLBB, y2 + 42);
+  scene.fillText(`${Math.min(sGLBB, FINISH_DISTANCE).toFixed(1)} m`, xGLBB, y2 + 48);
 }
 
 function drawLane(ctx, y, W, startX, finishX) {
@@ -563,7 +590,7 @@ function drawLane(ctx, y, W, startX, finishX) {
   ctx.lineTo(W, y + 15);
   ctx.stroke();
 
-  // garis start
+  // garis start (putus-putus)
   ctx.strokeStyle = '#555';
   ctx.setLineDash([5, 5]);
   ctx.beginPath();
@@ -577,7 +604,7 @@ function drawLane(ctx, y, W, startX, finishX) {
   ctx.textAlign = 'left';
   ctx.fillText('START', startX - 15, y + 35);
 
-  // 🏁 GARIS FINISH (checkered)
+  // checkered finish
   const fw = 10;
   const fh = 6;
   for (let row = 0; row < 8; row++) {
@@ -586,7 +613,6 @@ function drawLane(ctx, y, W, startX, finishX) {
       ctx.fillRect(finishX + col * fw, y - 25 + row * fh, fw, fh);
     }
   }
-  // tiang finish
   ctx.fillStyle = '#666';
   ctx.fillRect(finishX - 1, y - 30, 2, 50);
 
@@ -631,16 +657,20 @@ function roundRect(ctx, x, y, w, h, r) {
   ctx.closePath();
 }
 
-// ============ DRAW GRAPHS ============
+// ================================================================
+// DRAW GRAPHS — pakai resolusi INTERNAL (400x220)
+// ================================================================
 function drawGraph(ctx, dataObj, key, label) {
-  const W = ctx.canvas.width;
-  const H = ctx.canvas.height;
+  const W = 400;   // ⚠️ FIXED, BUKAN ctx.canvas.width
+  const H = 220;   // ⚠️ FIXED
+
   const PAD = { left: 45, right: 15, top: 20, bottom: 30 };
   const plotW = W - PAD.left - PAD.right;
   const plotH = H - PAD.top - PAD.bottom;
 
   ctx.clearRect(0, 0, W, H);
 
+  // cari max
   let maxY = 1, maxT = 1;
   ['glb', 'glbb'].forEach(k => {
     dataObj[k].forEach(d => {
@@ -670,7 +700,7 @@ function drawGraph(ctx, dataObj, key, label) {
   ctx.lineTo(W - PAD.right, H - PAD.bottom);
   ctx.stroke();
 
-  // labels
+  // label Y
   ctx.fillStyle = '#888';
   ctx.font = '10px sans-serif';
   ctx.textAlign = 'right';
@@ -679,6 +709,7 @@ function drawGraph(ctx, dataObj, key, label) {
     const y = PAD.top + (plotH / 4) * i;
     ctx.fillText(val.toFixed(0), PAD.left - 5, y + 3);
   }
+  // label X
   ctx.textAlign = 'center';
   for (let i = 0; i <= 4; i++) {
     const val = (maxT / 4) * i;
@@ -693,7 +724,7 @@ function drawGraph(ctx, dataObj, key, label) {
   ctx.textAlign = 'right';
   ctx.fillText('t (s)', W - PAD.right, H - 5);
 
-  // plot lines
+  // plot
   ctx.textAlign = 'left';
   ['glb', 'glbb'].forEach(k => {
     const data = dataObj[k];
@@ -728,7 +759,9 @@ function drawGraph(ctx, dataObj, key, label) {
   });
 }
 
-// ============ UPDATE INFO ============
+// ================================================================
+// INFO
+// ================================================================
 function updateInfo(t, glb, glbb) {
   el.infoT.textContent = `${t.toFixed(2)} s`;
   el.infoGLB.textContent = `${glb.s.toFixed(1)} m | ${glb.v.toFixed(1)} m/s`;
@@ -737,39 +770,17 @@ function updateInfo(t, glb, glbb) {
   el.scrubT.textContent = `t = ${t.toFixed(2)} s`;
 }
 
-// ============ CHECK WINNER ============
+// ================================================================
+// WINNER
+// ================================================================
 function checkWinner(glb, glbb) {
   if (winner) return winner;
   const glbDone = glb.s >= FINISH_DISTANCE;
   const glbbDone = glbb.s >= FINISH_DISTANCE;
-  
-  if (glbDone && glbbDone) {
-    // Cek siapa yang sebenarnya lebih dulu... pendekatan: hitung waktu persis
-    const tGLB = FINISH_DISTANCE / params.v0GLB;
-    // GLBB: 75 = v0*t + 0.5*a*t^2
+
+  if (glbDone || glbbDone) {
+    const tGLB = params.v0GLB > 0 ? FINISH_DISTANCE / params.v0GLB : Infinity;
     let tGLBB = Infinity;
-    if (params.aGLBB !== 0) {
-      const A = 0.5 * params.aGLBB;
-      const B = params.v0GLBB;
-      const C = -FINISH_DISTANCE;
-      const D = B * B - 4 * A * C;
-      if (D >= 0) {
-        const t1 = (-B + Math.sqrt(D)) / (2 * A);
-        const t2 = (-B - Math.sqrt(D)) / (2 * A);
-        const candidates = [t1, t2].filter(x => x > 0);
-        tGLBB = candidates.length ? Math.min(...candidates) : Infinity;
-      }
-    } else if (params.v0GLBB > 0) {
-      tGLBB = FINISH_DISTANCE / params.v0GLBB;
-    }
-    
-    if (tGLB < tGLBB) winner = { who: 'glb', time: tGLB };
-    else if (tGLBB < tGLB) winner = { who: 'glbb', time: tGLBB };
-    else winner = { who: 'tie', time: tGLB };
-  } else if (glbDone) {
-    const tGLB = FINISH_DISTANCE / params.v0GLB;
-    winner = { who: 'glb', time: tGLB };
-  } else if (glbbDone) {
     if (params.aGLBB !== 0) {
       const A = 0.5 * params.aGLBB, B = params.v0GLBB, C = -FINISH_DISTANCE;
       const D = B * B - 4 * A * C;
@@ -777,11 +788,15 @@ function checkWinner(glb, glbb) {
         const t1 = (-B + Math.sqrt(D)) / (2 * A);
         const t2 = (-B - Math.sqrt(D)) / (2 * A);
         const cand = [t1, t2].filter(x => x > 0);
-        if (cand.length) winner = { who: 'glbb', time: Math.min(...cand) };
+        if (cand.length) tGLBB = Math.min(...cand);
       }
     } else if (params.v0GLBB > 0) {
-      winner = { who: 'glbb', time: FINISH_DISTANCE / params.v0GLBB };
+      tGLBB = FINISH_DISTANCE / params.v0GLBB;
     }
+
+    if (tGLB < tGLBB) winner = { who: 'glb', time: tGLB };
+    else if (tGLBB < tGLB) winner = { who: 'glbb', time: tGLBB };
+    else if (isFinite(tGLB)) winner = { who: 'tie', time: tGLB };
   }
   return winner;
 }
@@ -799,13 +814,15 @@ function hideWinner() {
   el.winnerBadge.classList.remove('show');
 }
 
-// ============ TABLE ============
+// ================================================================
+// TABLE
+// ================================================================
 function updateTable() {
   if (tableData.length === 0) {
     el.tableBody.innerHTML = '<tr><td colspan="5" class="empty-state">Tekan ▶ Mulai untuk merekam data</td></tr>';
     return;
   }
-  const rows = tableData.slice(-50).reverse(); // tampilkan 50 terakhir, terbaru di atas
+  const rows = tableData.slice(-50).reverse();
   el.tableBody.innerHTML = rows.map(r => `
     <tr>
       <td>${r.t.toFixed(2)}</td>
@@ -817,7 +834,9 @@ function updateTable() {
   `).join('');
 }
 
-// ============ EXPORT CSV ============
+// ================================================================
+// EXPORT CSV
+// ================================================================
 document.getElementById('btnExport').addEventListener('click', () => {
   if (tableData.length === 0) {
     alert('Belum ada data bro, tekan ▶ Mulai dulu!');
@@ -836,7 +855,9 @@ document.getElementById('btnExport').addEventListener('click', () => {
   URL.revokeObjectURL(url);
 });
 
-// ============ TABS ============
+// ================================================================
+// TABS
+// ================================================================
 document.querySelectorAll('.tab').forEach(tab => {
   tab.addEventListener('click', () => {
     document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
@@ -844,25 +865,26 @@ document.querySelectorAll('.tab').forEach(tab => {
     const target = tab.dataset.tab;
     document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
     document.getElementById('section-' + target).classList.add('active');
+    // redraw grafik setelah tab ditampilkan (karena canvas yang hidden nggak render)
+    setTimeout(() => draw(), 50);
   });
 });
 
-// ============ MAIN DRAW ============
+// ================================================================
+// DRAW
+// ================================================================
 function draw() {
   const glb = stateGLB(t);
   const glbb = stateGLBB(t);
 
   drawScene(t, glb.s, glbb.s, glb.v, glbb.v);
   updateInfo(t, glb, glbb);
-
   drawGraph(gV, dataV, 'v', 'v (m/s)');
   drawGraph(gS, dataS, 's', 's (m)');
 
-  // cek pemenang
   const w = checkWinner(glb, glbb);
-  if (w && !winner) winner = w;
-  if (winner) {
-    showWinner(winner);
+  if (w) {
+    showWinner(w);
     if (running) {
       running = false;
       document.getElementById('btnStart').textContent = '▶ Mulai';
@@ -870,17 +892,22 @@ function draw() {
   }
 }
 
-// ============ LOOP ============
+// ================================================================
+// LOOP
+// ================================================================
 let lastRecorded = -1;
 function loop() {
   if (running) {
     t += DT;
-    if (t > MAX_T) { t = MAX_T; running = false; document.getElementById('btnStart').textContent = '▶ Mulai'; }
-    
+    if (t > MAX_T) {
+      t = MAX_T;
+      running = false;
+      document.getElementById('btnStart').textContent = '▶ Mulai';
+    }
+
     const glb = stateGLB(t);
     const glbb = stateGLBB(t);
 
-    // record data tiap 0.1s
     const slot = Math.round(t / 0.1);
     if (slot !== lastRecorded) {
       lastRecorded = slot;
@@ -889,8 +916,7 @@ function loop() {
       dataS.glb.push({ t, s: Math.max(0, glb.s) });
       dataS.glbb.push({ t, s: Math.max(0, glbb.s) });
       tableData.push({
-        t,
-        sGLB: glb.s, vGLB: glb.v,
+        t, sGLB: glb.s, vGLB: glb.v,
         sGLBB: glbb.s, vGLBB: glbb.v,
       });
       updateTable();
@@ -901,7 +927,9 @@ function loop() {
   requestAnimationFrame(loop);
 }
 
-// ============ ACTIONS ============
+// ================================================================
+// ACTIONS
+// ================================================================
 function reset() {
   t = 0;
   running = false;
@@ -917,7 +945,7 @@ function reset() {
 }
 
 document.getElementById('btnStart').addEventListener('click', () => {
-  if (winner) { reset(); }
+  if (winner) reset();
   if (t >= MAX_T) reset();
   running = !running;
   document.getElementById('btnStart').textContent = running ? '⏸ Pause' : '▶ Lanjut';
@@ -925,29 +953,11 @@ document.getElementById('btnStart').addEventListener('click', () => {
 
 document.getElementById('btnReset').addEventListener('click', reset);
 
-// ============ RESIZE (retina) ============
-function handleResize() {
-  const dpr = window.devicePixelRatio || 1;
-  [scene, gV, gS].forEach(ctx => {
-    const canvas = ctx.canvas;
-    const rect = canvas.getBoundingClientRect();
-    const w = rect.width;
-    const h = (canvas.height / canvas.width) * w;
-    canvas.width = w * dpr;
-    canvas.height = h * dpr;
-    canvas.style.height = h + 'px';
-    ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.scale(dpr, dpr);
-  });
-  draw();
-}
-window.addEventListener('resize', handleResize);
-window.addEventListener('orientationchange', () => setTimeout(handleResize, 200));
-
-// ============ INIT ============
+// ================================================================
+// INIT
+// ================================================================
 reset();
 loop();
-setTimeout(handleResize, 100);
 </script>
 </body>
 </html>
