@@ -1,0 +1,953 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>GLB vs GLBB — Lab Virtual</title>
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+    color: #fff;
+    margin: 0;
+    padding: 12px;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding-bottom: 30px;
+  }
+
+  h1 {
+    font-size: clamp(16px, 4vw, 22px);
+    text-align: center;
+    margin: 0 0 4px 0;
+    background: linear-gradient(90deg, #4a9eff, #ff6b6b);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .subtitle {
+    text-align: center;
+    font-size: clamp(11px, 2.8vw, 13px);
+    color: #888;
+    margin: 0 0 4px 0;
+  }
+
+  /* === SCENE === */
+  .scene-wrap {
+    background: #0f0f1e;
+    border-radius: 12px;
+    padding: 8px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+    position: relative;
+  }
+
+  #scene { width: 100%; height: auto; display: block; border-radius: 8px; }
+
+  .winner-badge {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0);
+    background: linear-gradient(135deg, #ffd700, #ff9500);
+    color: #1a1a2e;
+    padding: 16px 28px;
+    border-radius: 16px;
+    font-weight: bold;
+    font-size: clamp(14px, 4vw, 20px);
+    text-align: center;
+    box-shadow: 0 10px 40px rgba(255, 215, 0, 0.5);
+    transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    pointer-events: none;
+    z-index: 10;
+    white-space: nowrap;
+  }
+
+  .winner-badge.show { transform: translate(-50%, -50%) scale(1); }
+  .winner-badge small { display: block; font-size: 0.7em; font-weight: normal; opacity: 0.8; margin-top: 4px; }
+
+  /* === INFO BAR === */
+  .info-bar {
+    background: #0f0f1e;
+    border-radius: 10px;
+    padding: 10px 12px;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    font-size: clamp(10px, 2.6vw, 12px);
+    text-align: center;
+  }
+
+  .info-item .label { color: #888; margin-bottom: 2px; }
+  .info-item .val {
+    font-weight: bold;
+    font-size: clamp(12px, 3.2vw, 15px);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* === TIME SCRUB === */
+  .scrub-wrap {
+    background: #0f0f1e;
+    border-radius: 10px;
+    padding: 10px 12px;
+  }
+
+  .scrub-header {
+    display: flex;
+    justify-content: space-between;
+    font-size: clamp(11px, 2.8vw, 13px);
+    color: #aaa;
+    margin-bottom: 8px;
+  }
+
+  .scrub-header .t-val {
+    color: #ffd700;
+    font-weight: bold;
+    font-variant-numeric: tabular-nums;
+  }
+
+  input[type="range"] {
+    -webkit-appearance: none;
+    width: 100%;
+    height: 6px;
+    border-radius: 3px;
+    background: #2a2a3e;
+    outline: none;
+  }
+
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: #ffd700;
+    cursor: pointer;
+    box-shadow: 0 0 10px #ffd70080;
+  }
+
+  /* === CONTROLS === */
+  .controls { display: grid; grid-template-columns: 1fr; gap: 10px; }
+  @media (min-width: 600px) {
+    .controls { grid-template-columns: 1fr 1fr; }
+    .buttons-row { grid-column: span 2; }
+  }
+
+  .card {
+    background: #0f0f1e;
+    border-radius: 12px;
+    padding: 12px;
+    border: 2px solid transparent;
+    transition: border-color 0.3s;
+  }
+  .card.glb { border-color: #4a9eff40; }
+  .card.glbb { border-color: #ff6b6b40; }
+
+  .card-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: bold;
+    font-size: clamp(13px, 3.2vw, 15px);
+    margin-bottom: 10px;
+  }
+
+  .dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
+  .dot.glb { background: #4a9eff; box-shadow: 0 0 10px #4a9eff; }
+  .dot.glbb { background: #ff6b6b; box-shadow: 0 0 10px #ff6b6b; }
+  .card-header small { font-weight: normal; color: #888; font-size: 0.85em; }
+
+  .slider-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+    font-size: clamp(11px, 2.8vw, 13px);
+  }
+  .slider-row label { min-width: 70px; color: #aaa; }
+  .slider-row input[type="range"] { flex: 1; }
+  .slider-row .value {
+    min-width: 50px;
+    text-align: right;
+    font-weight: bold;
+    font-variant-numeric: tabular-nums;
+  }
+  .value.glb { color: #4a9eff; }
+  .value.glbb { color: #ff6b6b; }
+
+  .card.glbb input[type="range"]::-webkit-slider-thumb {
+    background: #ff6b6b;
+    box-shadow: 0 0 8px #ff6b6b80;
+  }
+
+  /* === BUTTONS === */
+  .buttons-row { display: flex; gap: 8px; }
+
+  .btn {
+    flex: 1;
+    padding: 14px;
+    border-radius: 10px;
+    border: none;
+    font-size: clamp(13px, 3.2vw, 15px);
+    font-weight: bold;
+    cursor: pointer;
+    transition: transform 0.1s;
+    color: white;
+    min-height: 48px;
+    touch-action: manipulation;
+  }
+  .btn:active { transform: scale(0.96); }
+  .btn-start { background: linear-gradient(135deg, #00c853, #00e676); }
+  .btn-reset { background: #333; }
+  .btn-export { background: linear-gradient(135deg, #9c27b0, #e91e63); }
+
+  /* === TABS === */
+  .tabs {
+    display: flex;
+    background: #0f0f1e;
+    border-radius: 10px;
+    padding: 4px;
+    gap: 4px;
+  }
+  .tab {
+    flex: 1;
+    padding: 10px;
+    text-align: center;
+    border-radius: 8px;
+    font-size: clamp(11px, 2.8vw, 13px);
+    font-weight: bold;
+    color: #888;
+    cursor: pointer;
+    transition: all 0.2s;
+    user-select: none;
+    touch-action: manipulation;
+  }
+  .tab.active { background: #2a2a3e; color: #fff; }
+
+  /* === GRAPHS === */
+  .graphs {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  @media (min-width: 600px) { .graphs { grid-template-columns: 1fr 1fr; } }
+
+  .graph-card { background: #0f0f1e; border-radius: 12px; padding: 10px; }
+  .graph-title {
+    font-size: clamp(11px, 2.8vw, 13px);
+    color: #aaa;
+    margin-bottom: 6px;
+    font-weight: bold;
+  }
+  .graph-card canvas { width: 100%; height: auto; display: block; }
+
+  .legend {
+    display: flex; gap: 12px; justify-content: center;
+    font-size: clamp(10px, 2.6vw, 12px);
+    margin-top: 6px; color: #aaa;
+  }
+  .legend span { display: flex; align-items: center; gap: 5px; }
+  .legend i {
+    width: 14px; height: 3px; border-radius: 2px; display: inline-block;
+  }
+
+  /* === DATA TABLE === */
+  .table-wrap {
+    background: #0f0f1e;
+    border-radius: 12px;
+    padding: 12px;
+    overflow-x: auto;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: clamp(10px, 2.6vw, 12px);
+    font-variant-numeric: tabular-nums;
+  }
+  th {
+    background: #2a2a3e;
+    color: #aaa;
+    padding: 8px 6px;
+    text-align: center;
+    font-weight: bold;
+    position: sticky;
+    top: 0;
+    font-size: clamp(9px, 2.4vw, 11px);
+  }
+  td {
+    padding: 6px;
+    text-align: center;
+    border-bottom: 1px solid #1e1e3a;
+  }
+  tr:last-child td { border-bottom: none; }
+  .td-glb { color: #4a9eff; }
+  .td-glbb { color: #ff6b6b; }
+  .table-wrap .scroll-hint {
+    text-align: center;
+    font-size: 10px;
+    color: #666;
+    margin-top: 8px;
+  }
+
+  .empty-state {
+    text-align: center;
+    color: #666;
+    padding: 20px;
+    font-size: 12px;
+  }
+
+  /* === HIDDEN SECTIONS === */
+  .section { display: none; }
+  .section.active { display: block; }
+</style>
+</head>
+<body>
+
+  <div>
+    <h1>🚗 GLB vs GLBB</h1>
+    <p class="subtitle">Perbandingan Gerak Lurus Beraturan vs Berubah Beraturan</p>
+  </div>
+
+  <!-- SCENE -->
+  <div class="scene-wrap">
+    <canvas id="scene" width="800" height="260"></canvas>
+    <div class="winner-badge" id="winnerBadge">🏆 <span id="winnerText">GLB Menang!</span><small id="winnerTime">pada t = 0 s</small></div>
+  </div>
+
+  <!-- INFO -->
+  <div class="info-bar">
+    <div class="info-item">
+      <div class="label">Waktu</div>
+      <div class="val" id="infoT">0.00 s</div>
+    </div>
+    <div class="info-item">
+      <div class="label">🔵 GLB (s | v)</div>
+      <div class="val" id="infoGLB">0.0 m | 0.0 m/s</div>
+    </div>
+    <div class="info-item">
+      <div class="label">🔴 GLBB (s | v)</div>
+      <div class="val" id="infoGLBB">0.0 m | 0.0 m/s</div>
+    </div>
+  </div>
+
+  <!-- TIME SCRUB -->
+  <div class="scrub-wrap">
+    <div class="scrub-header">
+      <span>🎚️ Scrub Waktu</span>
+      <span class="t-val" id="scrubT">t = 0.00 s</span>
+    </div>
+    <input type="range" id="scrub" min="0" max="10" value="0" step="0.05">
+  </div>
+
+  <!-- CONTROLS -->
+  <div class="controls">
+    <div class="card glb">
+      <div class="card-header">
+        <span class="dot glb"></span>
+        GLB <small>(a = 0)</small>
+      </div>
+      <div class="slider-row">
+        <label>v₀</label>
+        <input type="range" id="v0GLB" min="0" max="15" value="5" step="0.5">
+        <span class="value glb" id="v0GLBVal">5.0</span>
+      </div>
+    </div>
+
+    <div class="card glbb">
+      <div class="card-header">
+        <span class="dot glbb"></span>
+        GLBB <small>(a ≠ 0)</small>
+      </div>
+      <div class="slider-row">
+        <label>v₀</label>
+        <input type="range" id="v0GLBB" min="0" max="15" value="5" step="0.5">
+        <span class="value glbb" id="v0GLBBVal">5.0</span>
+      </div>
+      <div class="slider-row">
+        <label>a</label>
+        <input type="range" id="aGLBB" min="-5" max="5" value="2" step="0.5">
+        <span class="value glbb" id="aGLBBVal">2.0</span>
+      </div>
+    </div>
+
+    <div class="buttons-row">
+      <button class="btn btn-start" id="btnStart">▶ Mulai</button>
+      <button class="btn btn-reset" id="btnReset">⟲ Reset</button>
+    </div>
+  </div>
+
+  <!-- TABS -->
+  <div class="tabs">
+    <div class="tab active" data-tab="graphs">📈 Grafik</div>
+    <div class="tab" data-tab="table">📊 Tabel Data</div>
+  </div>
+
+  <!-- GRAPHS SECTION -->
+  <div class="section active" id="section-graphs">
+    <div class="graphs">
+      <div class="graph-card">
+        <div class="graph-title">📈 Grafik v - t</div>
+        <canvas id="graphV" width="400" height="220"></canvas>
+        <div class="legend">
+          <span><i style="background:#4a9eff"></i>GLB</span>
+          <span><i style="background:#ff6b6b"></i>GLBB</span>
+        </div>
+      </div>
+      <div class="graph-card">
+        <div class="graph-title">📉 Grafik s - t</div>
+        <canvas id="graphS" width="400" height="220"></canvas>
+        <div class="legend">
+          <span><i style="background:#4a9eff"></i>GLB</span>
+          <span><i style="background:#ff6b6b"></i>GLBB</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TABLE SECTION -->
+  <div class="section" id="section-table">
+    <div class="table-wrap">
+      <div style="display:flex; gap:8px; margin-bottom:10px;">
+        <button class="btn btn-export" id="btnExport" style="flex:1;">⬇ Export CSV</button>
+      </div>
+      <table id="dataTable">
+        <thead>
+          <tr>
+            <th>t (s)</th>
+            <th>s GLB (m)</th>
+            <th>v GLB (m/s)</th>
+            <th>s GLBB (m)</th>
+            <th>v GLBB (m/s)</th>
+          </tr>
+        </thead>
+        <tbody id="tableBody">
+          <tr><td colspan="5" class="empty-state">Tekan ▶ Mulai untuk merekam data</td></tr>
+        </tbody>
+      </table>
+      <div class="scroll-hint">← Geser tabel ke samping kalau kepotong →</div>
+    </div>
+  </div>
+
+<script>
+// ============ SETUP ============
+const scene = document.getElementById('scene').getContext('2d');
+const gV = document.getElementById('graphV').getContext('2d');
+const gS = document.getElementById('graphS').getContext('2d');
+
+const el = {
+  v0GLB: document.getElementById('v0GLB'),
+  v0GLBVal: document.getElementById('v0GLBVal'),
+  v0GLBB: document.getElementById('v0GLBB'),
+  v0GLBBVal: document.getElementById('v0GLBBVal'),
+  aGLBB: document.getElementById('aGLBB'),
+  aGLBBVal: document.getElementById('aGLBBVal'),
+  infoT: document.getElementById('infoT'),
+  infoGLB: document.getElementById('infoGLB'),
+  infoGLBB: document.getElementById('infoGLBB'),
+  scrub: document.getElementById('scrub'),
+  scrubT: document.getElementById('scrubT'),
+  winnerBadge: document.getElementById('winnerBadge'),
+  winnerText: document.getElementById('winnerText'),
+  winnerTime: document.getElementById('winnerTime'),
+  tableBody: document.getElementById('tableBody'),
+};
+
+let params = { v0GLB: 5, v0GLBB: 5, aGLBB: 2 };
+let t = 0;
+let running = false;
+let winner = null; // 'glb' | 'glbb' | 'tie' | null
+const MAX_T = 10;
+const DT = 0.05;
+const FINISH_DISTANCE = 75; // meter
+
+let dataV = { glb: [], glbb: [] };
+let dataS = { glb: [], glbb: [] };
+let tableData = []; // { t, sGLB, vGLB, sGLBB, vGLBB }
+
+// ============ INPUT HANDLERS ============
+function bindSlider(input, valEl, key, decimals = 1) {
+  input.addEventListener('input', () => {
+    const v = parseFloat(input.value);
+    params[key] = v;
+    valEl.textContent = v.toFixed(decimals);
+    reset();
+  });
+}
+bindSlider(el.v0GLB, el.v0GLBVal, 'v0GLB');
+bindSlider(el.v0GLBB, el.v0GLBBVal, 'v0GLBB');
+bindSlider(el.aGLBB, el.aGLBBVal, 'aGLBB');
+
+// Scrub handler
+el.scrub.addEventListener('input', () => {
+  if (running) { running = false; document.getElementById('btnStart').textContent = '▶ Lanjut'; }
+  t = parseFloat(el.scrub.value);
+  draw();
+});
+
+// ============ PHYSICS ============
+function stateGLB(time) {
+  return { s: params.v0GLB * time, v: params.v0GLB, a: 0 };
+}
+function stateGLBB(time) {
+  return {
+    s: params.v0GLBB * time + 0.5 * params.aGLBB * time * time,
+    v: params.v0GLBB + params.aGLBB * time,
+    a: params.aGLBB,
+  };
+}
+
+// ============ DRAW SCENE ============
+function drawScene(t, sGLB, sGLBB, vGLB, vGLBB) {
+  const W = scene.canvas.width;
+  const H = scene.canvas.height;
+  scene.clearRect(0, 0, W, H);
+
+  // grid
+  scene.strokeStyle = '#1e1e3a';
+  scene.lineWidth = 1;
+  for (let x = 0; x < W; x += 40) {
+    scene.beginPath(); scene.moveTo(x, 0); scene.lineTo(x, H); scene.stroke();
+  }
+  for (let y = 0; y < H; y += 40) {
+    scene.beginPath(); scene.moveTo(0, y); scene.lineTo(W, y); scene.stroke();
+  }
+
+  // skala: 75m -> lebar layar - margin
+  const MARGIN_START = 40;
+  const MARGIN_END = 60;
+  const trackW = W - MARGIN_START - MARGIN_END;
+  const SCALE = trackW / FINISH_DISTANCE;
+
+  const finishX = MARGIN_START + FINISH_DISTANCE * SCALE;
+
+  // === Lintasan GLB ===
+  const y1 = 80;
+  drawLane(scene, y1, W, MARGIN_START, finishX);
+
+  // === Lintasan GLBB ===
+  const y2 = 190;
+  drawLane(scene, y2, W, MARGIN_START, finishX);
+
+  // === Mobil ===
+  const xGLB = MARGIN_START + Math.min(sGLB, FINISH_DISTANCE) * SCALE;
+  drawCar(scene, Math.min(xGLB, finishX - 25), y1, '#4a9eff', 'GLB');
+
+  const xGLBB = MARGIN_START + Math.min(sGLBB, FINISH_DISTANCE) * SCALE;
+  drawCar(scene, Math.min(xGLBB, finishX - 25), y2, '#ff6b6b', 'GLBB');
+
+  // label kecepatan
+  scene.fillStyle = '#888';
+  scene.font = 'bold 11px sans-serif';
+  scene.textAlign = 'left';
+  scene.fillText(`${vGLB.toFixed(1)} m/s`, 5, y1 - 32);
+  scene.fillText(`${vGLBB.toFixed(1)} m/s`, 5, y2 - 32);
+
+  // label jarak
+  scene.fillStyle = '#4a9eff';
+  scene.textAlign = 'center';
+  scene.font = 'bold 10px sans-serif';
+  scene.fillText(`${Math.min(sGLB, FINISH_DISTANCE).toFixed(1)} m`, xGLB, y1 + 42);
+  scene.fillStyle = '#ff6b6b';
+  scene.fillText(`${Math.min(sGLBB, FINISH_DISTANCE).toFixed(1)} m`, xGLBB, y2 + 42);
+}
+
+function drawLane(ctx, y, W, startX, finishX) {
+  // garis lintasan
+  ctx.strokeStyle = '#333';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(0, y + 15);
+  ctx.lineTo(W, y + 15);
+  ctx.stroke();
+
+  // garis start
+  ctx.strokeStyle = '#555';
+  ctx.setLineDash([5, 5]);
+  ctx.beginPath();
+  ctx.moveTo(startX, y - 25);
+  ctx.lineTo(startX, y + 20);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  ctx.fillStyle = '#555';
+  ctx.font = '10px sans-serif';
+  ctx.textAlign = 'left';
+  ctx.fillText('START', startX - 15, y + 35);
+
+  // 🏁 GARIS FINISH (checkered)
+  const fw = 10;
+  const fh = 6;
+  for (let row = 0; row < 8; row++) {
+    for (let col = 0; col < 2; col++) {
+      ctx.fillStyle = (row + col) % 2 === 0 ? '#fff' : '#111';
+      ctx.fillRect(finishX + col * fw, y - 25 + row * fh, fw, fh);
+    }
+  }
+  // tiang finish
+  ctx.fillStyle = '#666';
+  ctx.fillRect(finishX - 1, y - 30, 2, 50);
+
+  ctx.fillStyle = '#ffd700';
+  ctx.font = 'bold 10px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('FINISH', finishX + 10, y + 42);
+}
+
+function drawCar(ctx, x, y, color, label) {
+  ctx.fillStyle = color;
+  ctx.shadowColor = color;
+  ctx.shadowBlur = 15;
+  roundRect(ctx, x, y - 15, 50, 30, 6);
+  ctx.fill();
+  ctx.shadowBlur = 0;
+
+  ctx.fillStyle = 'rgba(255,255,255,0.3)';
+  roundRect(ctx, x + 15, y - 10, 20, 12, 3);
+  ctx.fill();
+
+  ctx.fillStyle = '#111';
+  ctx.beginPath(); ctx.arc(x + 12, y + 17, 6, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(x + 38, y + 17, 6, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#555';
+  ctx.beginPath(); ctx.arc(x + 12, y + 17, 2.5, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(x + 38, y + 17, 2.5, 0, Math.PI * 2); ctx.fill();
+
+  ctx.fillStyle = color;
+  ctx.font = 'bold 11px sans-serif';
+  ctx.textAlign = 'left';
+  ctx.fillText(label, x + 15, y - 20);
+}
+
+function roundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
+}
+
+// ============ DRAW GRAPHS ============
+function drawGraph(ctx, dataObj, key, label) {
+  const W = ctx.canvas.width;
+  const H = ctx.canvas.height;
+  const PAD = { left: 45, right: 15, top: 20, bottom: 30 };
+  const plotW = W - PAD.left - PAD.right;
+  const plotH = H - PAD.top - PAD.bottom;
+
+  ctx.clearRect(0, 0, W, H);
+
+  let maxY = 1, maxT = 1;
+  ['glb', 'glbb'].forEach(k => {
+    dataObj[k].forEach(d => {
+      maxY = Math.max(maxY, Math.abs(d[key]));
+      maxT = Math.max(maxT, d.t);
+    });
+  });
+  maxY = Math.ceil(maxY / 5) * 5 || 5;
+  maxT = Math.max(maxT, 1);
+
+  // grid
+  ctx.strokeStyle = '#1e1e3a';
+  ctx.lineWidth = 1;
+  for (let i = 0; i <= 4; i++) {
+    const y = PAD.top + (plotH / 4) * i;
+    ctx.beginPath(); ctx.moveTo(PAD.left, y); ctx.lineTo(W - PAD.right, y); ctx.stroke();
+    const x = PAD.left + (plotW / 4) * i;
+    ctx.beginPath(); ctx.moveTo(x, PAD.top); ctx.lineTo(x, H - PAD.bottom); ctx.stroke();
+  }
+
+  // axes
+  ctx.strokeStyle = '#555';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(PAD.left, PAD.top);
+  ctx.lineTo(PAD.left, H - PAD.bottom);
+  ctx.lineTo(W - PAD.right, H - PAD.bottom);
+  ctx.stroke();
+
+  // labels
+  ctx.fillStyle = '#888';
+  ctx.font = '10px sans-serif';
+  ctx.textAlign = 'right';
+  for (let i = 0; i <= 4; i++) {
+    const val = (maxY / 4) * (4 - i);
+    const y = PAD.top + (plotH / 4) * i;
+    ctx.fillText(val.toFixed(0), PAD.left - 5, y + 3);
+  }
+  ctx.textAlign = 'center';
+  for (let i = 0; i <= 4; i++) {
+    const val = (maxT / 4) * i;
+    const x = PAD.left + (plotW / 4) * i;
+    ctx.fillText(val.toFixed(1), x, H - PAD.bottom + 14);
+  }
+
+  ctx.fillStyle = '#aaa';
+  ctx.font = 'bold 10px sans-serif';
+  ctx.textAlign = 'left';
+  ctx.fillText(label, PAD.left + 5, PAD.top + 12);
+  ctx.textAlign = 'right';
+  ctx.fillText('t (s)', W - PAD.right, H - 5);
+
+  // plot lines
+  ctx.textAlign = 'left';
+  ['glb', 'glbb'].forEach(k => {
+    const data = dataObj[k];
+    if (data.length < 2) return;
+    ctx.strokeStyle = k === 'glb' ? '#4a9eff' : '#ff6b6b';
+    ctx.lineWidth = 2.5;
+    ctx.shadowColor = ctx.strokeStyle;
+    ctx.shadowBlur = 6;
+    ctx.beginPath();
+    data.forEach((d, i) => {
+      const px = PAD.left + (d.t / maxT) * plotW;
+      const py = PAD.top + plotH - (Math.max(0, d[key]) / maxY) * plotH;
+      i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+    });
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+  });
+
+  // marker titik pada t saat ini
+  ['glb', 'glbb'].forEach(k => {
+    const data = dataObj[k];
+    if (data.length < 2) return;
+    const val = k === 'glb' ? stateGLB(t)[key] : stateGLBB(t)[key];
+    if (val < 0) return;
+    const px = PAD.left + (t / maxT) * plotW;
+    const py = PAD.top + plotH - (Math.max(0, val) / maxY) * plotH;
+    ctx.fillStyle = k === 'glb' ? '#4a9eff' : '#ff6b6b';
+    ctx.beginPath(); ctx.arc(px, py, 4, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+  });
+}
+
+// ============ UPDATE INFO ============
+function updateInfo(t, glb, glbb) {
+  el.infoT.textContent = `${t.toFixed(2)} s`;
+  el.infoGLB.textContent = `${glb.s.toFixed(1)} m | ${glb.v.toFixed(1)} m/s`;
+  el.infoGLBB.textContent = `${glbb.s.toFixed(1)} m | ${glbb.v.toFixed(1)} m/s`;
+  el.scrub.value = t;
+  el.scrubT.textContent = `t = ${t.toFixed(2)} s`;
+}
+
+// ============ CHECK WINNER ============
+function checkWinner(glb, glbb) {
+  if (winner) return winner;
+  const glbDone = glb.s >= FINISH_DISTANCE;
+  const glbbDone = glbb.s >= FINISH_DISTANCE;
+  
+  if (glbDone && glbbDone) {
+    // Cek siapa yang sebenarnya lebih dulu... pendekatan: hitung waktu persis
+    const tGLB = FINISH_DISTANCE / params.v0GLB;
+    // GLBB: 75 = v0*t + 0.5*a*t^2
+    let tGLBB = Infinity;
+    if (params.aGLBB !== 0) {
+      const A = 0.5 * params.aGLBB;
+      const B = params.v0GLBB;
+      const C = -FINISH_DISTANCE;
+      const D = B * B - 4 * A * C;
+      if (D >= 0) {
+        const t1 = (-B + Math.sqrt(D)) / (2 * A);
+        const t2 = (-B - Math.sqrt(D)) / (2 * A);
+        const candidates = [t1, t2].filter(x => x > 0);
+        tGLBB = candidates.length ? Math.min(...candidates) : Infinity;
+      }
+    } else if (params.v0GLBB > 0) {
+      tGLBB = FINISH_DISTANCE / params.v0GLBB;
+    }
+    
+    if (tGLB < tGLBB) winner = { who: 'glb', time: tGLB };
+    else if (tGLBB < tGLB) winner = { who: 'glbb', time: tGLBB };
+    else winner = { who: 'tie', time: tGLB };
+  } else if (glbDone) {
+    const tGLB = FINISH_DISTANCE / params.v0GLB;
+    winner = { who: 'glb', time: tGLB };
+  } else if (glbbDone) {
+    if (params.aGLBB !== 0) {
+      const A = 0.5 * params.aGLBB, B = params.v0GLBB, C = -FINISH_DISTANCE;
+      const D = B * B - 4 * A * C;
+      if (D >= 0) {
+        const t1 = (-B + Math.sqrt(D)) / (2 * A);
+        const t2 = (-B - Math.sqrt(D)) / (2 * A);
+        const cand = [t1, t2].filter(x => x > 0);
+        if (cand.length) winner = { who: 'glbb', time: Math.min(...cand) };
+      }
+    } else if (params.v0GLBB > 0) {
+      winner = { who: 'glbb', time: FINISH_DISTANCE / params.v0GLBB };
+    }
+  }
+  return winner;
+}
+
+function showWinner(w) {
+  if (!w) return;
+  el.winnerBadge.classList.add('show');
+  if (w.who === 'glb') el.winnerText.textContent = '🔵 GLB Menang!';
+  else if (w.who === 'glbb') el.winnerText.textContent = '🔴 GLBB Menang!';
+  else el.winnerText.textContent = '🤝 Seri!';
+  el.winnerTime.textContent = `pada t = ${w.time.toFixed(2)} s`;
+}
+
+function hideWinner() {
+  el.winnerBadge.classList.remove('show');
+}
+
+// ============ TABLE ============
+function updateTable() {
+  if (tableData.length === 0) {
+    el.tableBody.innerHTML = '<tr><td colspan="5" class="empty-state">Tekan ▶ Mulai untuk merekam data</td></tr>';
+    return;
+  }
+  const rows = tableData.slice(-50).reverse(); // tampilkan 50 terakhir, terbaru di atas
+  el.tableBody.innerHTML = rows.map(r => `
+    <tr>
+      <td>${r.t.toFixed(2)}</td>
+      <td class="td-glb">${r.sGLB.toFixed(2)}</td>
+      <td class="td-glb">${r.vGLB.toFixed(2)}</td>
+      <td class="td-glbb">${r.sGLBB.toFixed(2)}</td>
+      <td class="td-glbb">${r.vGLBB.toFixed(2)}</td>
+    </tr>
+  `).join('');
+}
+
+// ============ EXPORT CSV ============
+document.getElementById('btnExport').addEventListener('click', () => {
+  if (tableData.length === 0) {
+    alert('Belum ada data bro, tekan ▶ Mulai dulu!');
+    return;
+  }
+  let csv = 't (s),s GLB (m),v GLB (m/s),s GLBB (m),v GLBB (m/s)\n';
+  tableData.forEach(r => {
+    csv += `${r.t.toFixed(2)},${r.sGLB.toFixed(3)},${r.vGLB.toFixed(3)},${r.sGLBB.toFixed(3)},${r.vGLBB.toFixed(3)}\n`;
+  });
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `glb-glbb-data-${Date.now()}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+});
+
+// ============ TABS ============
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    const target = tab.dataset.tab;
+    document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+    document.getElementById('section-' + target).classList.add('active');
+  });
+});
+
+// ============ MAIN DRAW ============
+function draw() {
+  const glb = stateGLB(t);
+  const glbb = stateGLBB(t);
+
+  drawScene(t, glb.s, glbb.s, glb.v, glbb.v);
+  updateInfo(t, glb, glbb);
+
+  drawGraph(gV, dataV, 'v', 'v (m/s)');
+  drawGraph(gS, dataS, 's', 's (m)');
+
+  // cek pemenang
+  const w = checkWinner(glb, glbb);
+  if (w && !winner) winner = w;
+  if (winner) {
+    showWinner(winner);
+    if (running) {
+      running = false;
+      document.getElementById('btnStart').textContent = '▶ Mulai';
+    }
+  }
+}
+
+// ============ LOOP ============
+let lastRecorded = -1;
+function loop() {
+  if (running) {
+    t += DT;
+    if (t > MAX_T) { t = MAX_T; running = false; document.getElementById('btnStart').textContent = '▶ Mulai'; }
+    
+    const glb = stateGLB(t);
+    const glbb = stateGLBB(t);
+
+    // record data tiap 0.1s
+    const slot = Math.round(t / 0.1);
+    if (slot !== lastRecorded) {
+      lastRecorded = slot;
+      dataV.glb.push({ t, v: Math.max(0, glb.v) });
+      dataV.glbb.push({ t, v: Math.max(0, glbb.v) });
+      dataS.glb.push({ t, s: Math.max(0, glb.s) });
+      dataS.glbb.push({ t, s: Math.max(0, glbb.s) });
+      tableData.push({
+        t,
+        sGLB: glb.s, vGLB: glb.v,
+        sGLBB: glbb.s, vGLBB: glbb.v,
+      });
+      updateTable();
+    }
+
+    draw();
+  }
+  requestAnimationFrame(loop);
+}
+
+// ============ ACTIONS ============
+function reset() {
+  t = 0;
+  running = false;
+  winner = null;
+  lastRecorded = -1;
+  dataV = { glb: [], glbb: [] };
+  dataS = { glb: [], glbb: [] };
+  tableData = [];
+  document.getElementById('btnStart').textContent = '▶ Mulai';
+  hideWinner();
+  updateTable();
+  draw();
+}
+
+document.getElementById('btnStart').addEventListener('click', () => {
+  if (winner) { reset(); }
+  if (t >= MAX_T) reset();
+  running = !running;
+  document.getElementById('btnStart').textContent = running ? '⏸ Pause' : '▶ Lanjut';
+});
+
+document.getElementById('btnReset').addEventListener('click', reset);
+
+// ============ RESIZE (retina) ============
+function handleResize() {
+  const dpr = window.devicePixelRatio || 1;
+  [scene, gV, gS].forEach(ctx => {
+    const canvas = ctx.canvas;
+    const rect = canvas.getBoundingClientRect();
+    const w = rect.width;
+    const h = (canvas.height / canvas.width) * w;
+    canvas.width = w * dpr;
+    canvas.height = h * dpr;
+    canvas.style.height = h + 'px';
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.scale(dpr, dpr);
+  });
+  draw();
+}
+window.addEventListener('resize', handleResize);
+window.addEventListener('orientationchange', () => setTimeout(handleResize, 200));
+
+// ============ INIT ============
+reset();
+loop();
+setTimeout(handleResize, 100);
+</script>
+</body>
+</html>
